@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Screen Memory</string>
+    <string name="service_description">Captures screenshots and performs OCR for the Screen Memory plugin.</string>
+    <string name="status_waiting">Waiting for authorization…</string>
+    <string name="status_running">Screen Memory service is running on port 19700</string>
+    <string name="btn_authorize">Authorize Screen Capture</string>
+    <string name="btn_enable_accessibility">Enable Accessibility Service</string>
+</resources>
