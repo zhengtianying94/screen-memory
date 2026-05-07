@@ -1,0 +1,19 @@
+{
+  "name": "screen-memory",
+  "version": "0.1.0",
+  "description": "Screen capture, OCR, URI Graph memory, and signal accumulation for OpenClaw",
+  "entry_point": "screen_memory.tools:register",
+  "tools": [
+    "memory_write",
+    "memory_read",
+    "memory_search",
+    "memory_delete",
+    "graph_query_subtree",
+    "signal_ingest",
+    "signal_activate",
+    "screenshot_search"
+  ],
+  "requires": {
+    "python": ">=3.10"
+  }
+}

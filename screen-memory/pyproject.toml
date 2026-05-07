@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "screen-memory"
+version = "0.1.0"
+description = "OpenClaw plugin: screen capture, OCR, and Nocturne URI Graph memory"
+requires-python = ">=3.10"
+dependencies = [
+    "Pillow>=10.0",
+]
+
+[project.scripts]
+screen-memory = "screen_memory.cli:main"
+
+[project.optional-dependencies]
+windows = [
+    "winrt-Windows.Media.Ocr>=3.0",
+    "winrt-Windows.Graphics.Imaging>=3.0",
+    "winrt-Windows.Storage.Streams>=3.0",
+    "winrt-Windows.Foundation>=3.0",
+    "winrt-Windows.Foundation.Collections>=3.0",
+]
+tesseract = [
+    "pytesseract>=0.3.10",
+]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]

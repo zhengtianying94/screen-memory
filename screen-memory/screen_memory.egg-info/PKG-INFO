@@ -1,0 +1,9 @@
+Metadata-Version: 2.4
+Name: screen-memory
+Version: 0.1.0
+Summary: OpenClaw plugin: screen capture, OCR, and Nocturne URI Graph memory
+Requires-Python: >=3.10
+Requires-Dist: Pillow>=10.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.0; extra == "dev"
