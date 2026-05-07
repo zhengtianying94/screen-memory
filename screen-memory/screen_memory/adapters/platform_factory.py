@@ -2,11 +2,17 @@
 
 from __future__ import annotations
 
+import os
 import sys
 from typing import Optional
 
 from screen_memory.adapters.capture import ScreenCapture
 from screen_memory.adapters.ocr import OCREngine, OCRChain
+
+
+def _is_android() -> bool:
+    """Detect Android platform (Termux or Python-for-Android)."""
+    return sys.platform == "android" or "ANDROID_ROOT" in os.environ
 
 
 def create_capture(screenshot_dir: Optional[str] = None) -> ScreenCapture:
@@ -16,6 +22,10 @@ def create_capture(screenshot_dir: Optional[str] = None) -> ScreenCapture:
     if platform == "win32":
         from screen_memory.adapters.windows_capture import WindowsCapture
         return WindowsCapture(screenshot_dir=screenshot_dir)
+
+    if _is_android():
+        from screen_memory.adapters.android_capture import AndroidCapture
+        return AndroidCapture(screenshot_dir=screenshot_dir)
 
     if platform == "darwin":
         from screen_memory.adapters.macos_capture import MacOSCapture
@@ -56,6 +66,11 @@ def _get_platform_engines() -> list[OCREngine]:
     elif platform == "darwin":
         from screen_memory.adapters.vision_ocr import VisionOcr
         engines.append(VisionOcr())
+
+    # Android ML Kit
+    if _is_android():
+        from screen_memory.adapters.mlkit_ocr import MlKitOcr
+        engines.append(MlKitOcr())
 
     # Tesseract fallback (all platforms)
     from screen_memory.adapters.tesseract_ocr import TesseractOcr
