@@ -90,7 +90,8 @@ class HttpServer(
         return try {
             val contentLength = session.headers["content-length"]?.toLongOrNull() ?: 0L
             if (contentLength == 0L) return null
-            val body = session.inputStream.bufferedReader().readText()
+            val bytes = session.inputStream.readNBytes(contentLength.toInt())
+            val body = String(bytes, Charsets.UTF_8)
             if (body.isBlank()) null else JSONObject(body)
         } catch (e: Exception) {
             null

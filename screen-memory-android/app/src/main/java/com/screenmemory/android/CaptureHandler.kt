@@ -13,7 +13,8 @@ import android.view.WindowManager
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 
-/** Handles screen capture via MediaProjection + VirtualDisplay + ImageReader. */
+/** Handles screen capture via MediaProjection + VirtualDisplay + ImageReader.
+ *  Falls back to `screencap` shell command on emulator/rooted devices. */
 class CaptureHandler(
     private val mediaProjectionProvider: () -> MediaProjection?,
     private val windowManager: WindowManager,
@@ -21,7 +22,14 @@ class CaptureHandler(
 ) {
     fun capture(quality: Int = 80): JSONObject {
         val projection = mediaProjectionProvider()
-            ?: return errorResult("MediaProjection not available")
+        return if (projection != null) {
+            captureViaMediaProjection(projection, quality)
+        } else {
+            captureViaScreencap(quality)
+        }
+    }
+
+    private fun captureViaMediaProjection(projection: MediaProjection, quality: Int): JSONObject {
 
         val metrics = DisplayMetrics()
         windowManager.defaultDisplay.getRealMetrics(metrics)
@@ -40,26 +48,59 @@ class CaptureHandler(
                 imageReader.surface, null, null,
             )
 
-            val image: Image? = waitForFrame(imageReader, maxAttempts = 10, delayMs = 100)
+            val image = waitForFrame(imageReader, maxAttempts = 10, delayMs = 100)
                 ?: return errorResult("Failed to capture frame")
 
-            val bitmap = imageToBitmap(image, width, height)
-            image.close()
+            try {
+                val bitmap = imageToBitmap(image, width, height)
+                val jpegBytes = bitmapToJpeg(bitmap, quality)
+                val base64Image = Base64.encodeToString(jpegBytes, Base64.NO_WRAP)
+                val appPackage = packageNameProvider()
 
-            val jpegBytes = bitmapToJpeg(bitmap, quality)
-            val base64Image = Base64.encodeToString(jpegBytes, Base64.NO_WRAP)
-            val appPackage = packageNameProvider()
-
-            return JSONObject().apply {
-                put("image", base64Image)
-                put("width", width)
-                put("height", height)
-                put("app_package", appPackage ?: JSONObject.NULL)
-                put("capture_time_ms", 0L)
+                return JSONObject().apply {
+                    put("image", base64Image)
+                    put("width", width)
+                    put("height", height)
+                    put("app_package", appPackage ?: JSONObject.NULL)
+                    put("capture_time_ms", 0L)
+                }
+            } finally {
+                image.close()
             }
         } finally {
             virtualDisplay?.release()
             imageReader.close()
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun captureViaScreencap(quality: Int): JSONObject {
+        return try {
+            val tmpFile = java.io.File.createTempFile("screenmem", ".png")
+            val process = Runtime.getRuntime().exec(
+                arrayOf("screencap", "-p", tmpFile.absolutePath)
+            )
+            process.waitFor()
+            if (process.exitValue() != 0 || !tmpFile.exists()) {
+                return errorResult("screencap failed")
+            }
+            val bitmap = android.graphics.BitmapFactory.decodeFile(tmpFile.absolutePath)
+                ?: return errorResult("screencap decode failed")
+            tmpFile.delete()
+            val jpegBytes = bitmapToJpeg(bitmap, quality)
+            val base64Image = Base64.encodeToString(jpegBytes, Base64.NO_WRAP)
+            val metrics = DisplayMetrics()
+            windowManager.defaultDisplay.getRealMetrics(metrics)
+            val appPackage = packageNameProvider()
+            JSONObject().apply {
+                put("image", base64Image)
+                put("width", metrics.widthPixels)
+                put("height", metrics.heightPixels)
+                put("app_package", appPackage ?: JSONObject.NULL)
+                put("capture_time_ms", 0L)
+            }
+        } catch (e: Exception) {
+            errorResult("screencap fallback failed: ${e.message}")
         }
     }
 

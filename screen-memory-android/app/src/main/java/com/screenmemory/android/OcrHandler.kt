@@ -5,6 +5,7 @@ import android.util.Base64
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.chinese.ChineseTextRecognizerOptions
+import com.google.android.gms.tasks.Tasks
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -28,7 +29,7 @@ class OcrHandler {
                 ?: return emptyResult("Failed to decode image")
 
             val inputImage = InputImage.fromBitmap(bitmap, 0)
-            val visionText = recognizer.process(inputImage).result
+            val visionText = Tasks.await(recognizer.process(inputImage))
 
             val fullText = visionText.text
             val blocksArray = JSONArray()
