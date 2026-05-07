@@ -68,6 +68,9 @@ class FakeOCR:
         self._text = text
         self.attempted = False
 
+    def is_available(self) -> bool:
+        return True
+
     def recognize(self, image_data: bytes) -> OCRResult:
         self.attempted = True
         if self._text is None:
@@ -77,6 +80,9 @@ class FakeOCR:
 
 class FailOCR:
     """Always fails."""
+
+    def is_available(self) -> bool:
+        return True
 
     def recognize(self, image_data: bytes) -> OCRResult:
         return OCRResult(text="", confidence=0.0, engine="FailOCR")

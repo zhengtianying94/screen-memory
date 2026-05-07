@@ -32,6 +32,9 @@ class _FakeOCR:
     def __init__(self, text: str):
         self._text = text
 
+    def is_available(self) -> bool:
+        return True
+
     def recognize(self, image_data: bytes):
         from screen_memory.adapters.ocr import OCRResult
         return OCRResult(text=self._text, confidence=0.9, engine="FakeOCR")

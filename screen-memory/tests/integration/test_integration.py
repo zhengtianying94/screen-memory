@@ -32,6 +32,9 @@ class _StubOCR:
     def __init__(self, text: str):
         self._text = text
 
+    def is_available(self) -> bool:
+        return True
+
     def recognize(self, image_data: bytes) -> OCRResult:
         return OCRResult(text=self._text, confidence=0.95, engine="stub")
 
