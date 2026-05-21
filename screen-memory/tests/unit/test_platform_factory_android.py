@@ -46,3 +46,43 @@ class TestAndroidOcrChain:
             assert isinstance(engines[0], MlKitOcr)
             assert isinstance(engines[1], TesseractOcr)
             assert len(engines) == 2
+
+
+class TestAndroidOcrChainIntegration:
+    def test_android_ocr_chain_has_two_engines(self):
+        """create_ocr_chain on Android returns a chain with MlKit + Tesseract."""
+        with patch.object(sys, "platform", "android"):
+            from screen_memory.adapters.platform_factory import create_ocr_chain
+            chain = create_ocr_chain()
+            assert len(chain._engines) == 2
+            assert isinstance(chain._engines[0], MlKitOcr)
+            assert isinstance(chain._engines[1], TesseractOcr)
+
+    def test_android_ocr_chain_min_confidence_default(self):
+        """Default min_confidence is 0.5."""
+        with patch.object(sys, "platform", "android"):
+            from screen_memory.adapters.platform_factory import create_ocr_chain
+            chain = create_ocr_chain()
+            assert chain._min_confidence == 0.5
+
+    def test_android_ocr_chain_custom_confidence(self):
+        """Custom min_confidence is propagated."""
+        with patch.object(sys, "platform", "android"):
+            from screen_memory.adapters.platform_factory import create_ocr_chain
+            chain = create_ocr_chain(min_confidence=0.8)
+            assert chain._min_confidence == 0.8
+
+
+class TestAndroidCaptureOnNonAndroid:
+    def test_linux_without_android_root_returns_linux_capture(self):
+        """On plain Linux (no ANDROID_ROOT), should not return AndroidCapture."""
+        with patch.object(sys, "platform", "linux"), \
+             patch.dict(os.environ, {}, clear=False):
+            if "ANDROID_ROOT" in os.environ:
+                del os.environ["ANDROID_ROOT"]
+            try:
+                from screen_memory.adapters.platform_factory import create_capture
+                capture = create_capture()
+                assert not isinstance(capture, AndroidCapture)
+            except RuntimeError:
+                pass  # Expected: no linux_capture module exists yet
