@@ -93,3 +93,116 @@ class TestCustomEnvVars:
         with patch.dict(os.environ, {"SCREEN_MEMORY_APK_TIMEOUT": "5"}):
             capture = AndroidCapture()
             assert capture._client._timeout == 5
+
+
+def _make_registry() -> ToolRegistry:
+    """Create a ToolRegistry with in-memory DB (no APK dependency)."""
+    db = Database(":memory:")
+    db.initialize()
+    repo = GraphRepo(db)
+    ss_repo = ScreenshotRepo(db)
+    graph_svc = GraphService(repo)
+    policies = {
+        "person": EntityPolicy("person", 3.0, 86400 * 7, ["seen_multiple_times"]),
+        "topic": EntityPolicy("topic", 2.0, 86400 * 3, []),
+    }
+    signal_svc = SignalService(repo, policies)
+    return ToolRegistry(graph_svc, signal_svc, ss_repo)
+
+
+class TestAllToolsViaRegistry:
+    """Verify all 8 tools work through the registry (shared package)."""
+
+    def test_memory_write(self):
+        reg = _make_registry()
+        result = reg.call("memory_write", {"uri": "core://android/test", "content": "hello android"})
+        assert result["ok"] is True
+        assert result["uri"] == "core://android/test"
+
+    def test_memory_read(self):
+        reg = _make_registry()
+        reg.call("memory_write", {"uri": "core://android/test", "content": "data"})
+        result = reg.call("memory_read", {"uri": "core://android/test"})
+        assert result["content"] == "data"
+
+    def test_memory_search(self):
+        reg = _make_registry()
+        reg.call("memory_write", {"uri": "core://a", "content": "android kotlin"})
+        reg.call("memory_write", {"uri": "core://b", "content": "ios swift"})
+        results = reg.call("memory_search", {"query": "android"})
+        assert len(results) == 1
+        assert results[0]["node_uri"] == "core://a"
+
+    def test_memory_delete(self):
+        reg = _make_registry()
+        reg.call("memory_write", {"uri": "core://del", "content": "temp"})
+        result = reg.call("memory_delete", {"uri": "core://del"})
+        assert result["ok"] is True
+        assert reg.call("memory_read", {"uri": "core://del"}) is None
+
+    def test_graph_query_subtree(self):
+        reg = _make_registry()
+        reg.call("memory_write", {"uri": "core://a", "content": "root"})
+        reg.call("memory_write", {"uri": "core://a/b", "content": "child"})
+        result = reg.call("graph_query_subtree", {"uri": "core://a"})
+        assert result["uri"] == "core://a"
+        assert len(result["children"]) == 1
+
+    def test_signal_ingest(self):
+        reg = _make_registry()
+        result = reg.call("signal_ingest", {
+            "entity_type": "person",
+            "entity_name": "Alice",
+            "source": "screenshot",
+            "evidence": ["seen_multiple_times"],
+        })
+        assert result["name"] == "Alice"
+        assert result["status"] == "candidate"
+
+    def test_signal_activate(self):
+        reg = _make_registry()
+        for _ in range(5):
+            reg.call("signal_ingest", {
+                "entity_type": "person",
+                "entity_name": "Bob",
+                "source": "screenshot",
+                "evidence": ["seen_multiple_times"],
+            })
+        result = reg.call("signal_activate", {"entity_name": "Bob"})
+        assert result["status"] == "active"
+
+    def test_screenshot_search(self):
+        reg = _make_registry()
+        reg._ss_repo.insert("/tmp/android.png", "screen memory plugin test")
+        results = reg.call("screenshot_search", {"query": "plugin"})
+        assert len(results) == 1
+
+    def test_list_tools_has_8(self):
+        reg = _make_registry()
+        tools = reg.list_tools()
+        assert len(tools) == 8
+        names = [t["name"] for t in tools]
+        expected = [
+            "memory_write", "memory_read", "memory_search", "memory_delete",
+            "graph_query_subtree", "signal_ingest", "signal_activate",
+            "screenshot_search",
+        ]
+        assert names == expected
+
+
+class TestSignalActivationOnAndroid:
+    """Verify signal activation creates graph memory (Android scenario)."""
+
+    def test_activate_creates_graph_node(self):
+        reg = _make_registry()
+        for _ in range(5):
+            reg.call("signal_ingest", {
+                "entity_type": "topic",
+                "entity_name": "Android",
+                "source": "screenshot",
+                "evidence": [],
+            })
+        reg.call("signal_activate", {"entity_name": "Android"})
+        mem = reg.call("memory_read", {"uri": "core://entities/topic/Android"})
+        assert mem is not None
+        assert "Android" in mem["content"]

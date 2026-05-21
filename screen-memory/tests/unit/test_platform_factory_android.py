@@ -84,5 +84,5 @@ class TestAndroidCaptureOnNonAndroid:
                 from screen_memory.adapters.platform_factory import create_capture
                 capture = create_capture()
                 assert not isinstance(capture, AndroidCapture)
-            except RuntimeError:
+            except (RuntimeError, ModuleNotFoundError):
                 pass  # Expected: no linux_capture module exists yet
