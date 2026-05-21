@@ -10,16 +10,7 @@ info()  { echo -e "${GREEN}[INFO]${NC} $*"; }
 warn()  { echo -e "${YELLOW}[WARN]${NC} $*"; }
 error() { echo -e "${RED}[ERROR]${NC} $*"; exit 1; }
 
-info "=== Plugin Deployment ==="
-
-PLUGIN_SRC="/sdcard/screen-memory"
-OC_HOME="${HOME}/.openclaw"
-PLUGIN_DIR="$OC_HOME/plugins"
-
-if [ ! -f "$PLUGIN_SRC/openclaw.plugin.json" ]; then
-    error "Plugin source not found at $PLUGIN_SRC"
-fi
-info "Plugin source: $PLUGIN_SRC"
+info "=== Shared Package Deployment ==="
 
 PYTHON_CMD=""
 if command -v python &> /dev/null; then
@@ -31,32 +22,45 @@ else
 fi
 info "Python: $($PYTHON_CMD --version)"
 
-info "Deploying to $PLUGIN_DIR"
-mkdir -p "$PLUGIN_DIR"
-DEST="$PLUGIN_DIR/screen-memory"
-rm -rf "$DEST" 2>/dev/null || true
-cp -r "$PLUGIN_SRC" "$DEST"
-rm -rf "$DEST/tests" "$DEST/.git" "$DEST/__pycache__" 2>/dev/null || true
-info "Plugin copied to $DEST"
+SCREEN_MEMORY_SRC="${SCREEN_MEMORY_SRC:-/sdcard/screen-memory}"
 
-info "Installing Python dependencies..."
-$PYTHON_CMD -m pip install --user Pillow 2>/dev/null || warn "Pillow install failed"
+if [ ! -f "$SCREEN_MEMORY_SRC/pyproject.toml" ]; then
+    error "Shared package not found at $SCREEN_MEMORY_SRC (expected pyproject.toml)"
+fi
+info "Package source: $SCREEN_MEMORY_SRC"
+
+info "Installing screen-memory package..."
+$PYTHON_CMD -m pip install --user --editable "$SCREEN_MEMORY_SRC" 2>&1 || warn "pip install had warnings"
+
+info "Verifying package import..."
+$PYTHON_CMD -c "from screen_memory.tools import register; print('OK: tools.register imported')" \
+    || error "Failed to import screen_memory.tools"
 
 info "Configuring environment..."
+mkdir -p "$HOME/.screenmemory/screenshots" "$HOME/.screenmemory/db"
+
 cat > "$HOME/.screenmemory.env" << 'ENVEOF'
 export SCREEN_MEMORY_APK_URL="http://127.0.0.1:19700"
 export SCREEN_MEMORY_APK_TIMEOUT="10"
 export SCREEN_MEMORY_APK_OCR_TIMEOUT="15"
 export SCREEN_MEMORY_SCREENSHOT_DIR="$HOME/.screenmemory/screenshots"
+export SCREEN_MEMORY_DB="$HOME/.screenmemory/db/screen-memory.db"
 ENVEOF
 
 if ! grep -q ".screenmemory.env" "$HOME/.bashrc" 2>/dev/null; then
     echo '[ -f $HOME/.screenmemory.env ] && source $HOME/.screenmemory.env' >> "$HOME/.bashrc"
 fi
-mkdir -p "$HOME/.screenmemory/screenshots" "$HOME/.screenmemory/db"
+
+OC_HOME="${HOME}/.openclaw"
+PLUGIN_DIR="$OC_HOME/plugins"
+mkdir -p "$PLUGIN_DIR"
+DEST="$PLUGIN_DIR/screen-memory"
+rm -rf "$DEST" 2>/dev/null || true
+cp -r "$SCREEN_MEMORY_SRC" "$DEST"
+rm -rf "$DEST/tests" "$DEST/.git" "$DEST/__pycache__" "$DEST/**/__pycache__" 2>/dev/null || true
 
 info "Verifying plugin structure..."
-for f in openclaw.plugin.json screen_memory/__init__.py screen_memory/tools/__init__.py screen_memory/adapters/android_capture.py screen_memory/adapters/mlkit_ocr.py; do
+for f in openclaw.plugin.json screen_memory/__init__.py screen_memory/tools/__init__.py screen_memory/adapters/android_capture.py screen_memory/adapters/mlkit_ocr.py screen_memory/services/graph_service.py screen_memory/services/signal_service.py screen_memory/tools/registry.py; do
     if [ -f "$DEST/$f" ]; then
         info "  OK: $f"
     else
@@ -65,5 +69,5 @@ for f in openclaw.plugin.json screen_memory/__init__.py screen_memory/tools/__in
 done
 
 echo ""
-info "=== Plugin Deployment Complete ==="
+info "=== Deployment Complete ==="
 info "Run: bash $(dirname "$0")/verify.sh"
