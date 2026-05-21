@@ -104,3 +104,41 @@ class TestMultipleCaptures:
         svc.capture_and_index()
         svc.capture_and_index()
         assert len(svc._ss_repo.list_all()) == 2
+
+
+class _FailingCapture(ScreenCapture):
+    """Capture adapter that always raises ConnectionError (APK unavailable)."""
+
+    def capture(self) -> CaptureResult:
+        raise ConnectionError("APK service not reachable")
+
+
+class TestGracefulDegradation:
+    def test_capture_unavailable_returns_error_dict(self):
+        """When capture raises ConnectionError, capture_and_index returns error."""
+        db = Database(":memory:")
+        db.initialize()
+        repo = GraphRepo(db)
+        ss_repo = ScreenshotRepo(db)
+        capture = _FailingCapture()
+        ocr = OCRChain([])
+        svc = IndexService(repo, ss_repo, capture, ocr)
+        result = svc.capture_and_index()
+        assert result["ok"] is False
+        assert "error" in result
+        assert (
+            "capture" in result["error"].lower()
+            or "unavailable" in result["error"].lower()
+        )
+
+    def test_no_screenshot_stored_on_failure(self):
+        """When capture fails, no screenshot record is created."""
+        db = Database(":memory:")
+        db.initialize()
+        repo = GraphRepo(db)
+        ss_repo = ScreenshotRepo(db)
+        capture = _FailingCapture()
+        ocr = OCRChain([])
+        svc = IndexService(repo, ss_repo, capture, ocr)
+        svc.capture_and_index()
+        assert len(ss_repo.list_all()) == 0

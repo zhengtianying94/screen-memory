@@ -28,7 +28,11 @@ class IndexService:
         self, link_uri: Optional[str] = None
     ) -> dict:
         """Capture screen, run OCR, store screenshot, optionally link to graph."""
-        cap = self._capture.capture()
+        try:
+            cap = self._capture.capture()
+        except (ConnectionError, TimeoutError, OSError) as exc:
+            return {"ok": False, "error": f"capture_unavailable: {exc}"}
+
         ocr_result = self._ocr.recognize(cap.image_data)
 
         uri_obj = NocturneUri.parse(link_uri) if link_uri else None
