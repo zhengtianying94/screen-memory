@@ -6,6 +6,7 @@ import argparse
 import json
 import os
 import sys
+from pathlib import Path
 
 
 def _get_registry(db_path: str | None = None):
@@ -19,7 +20,7 @@ def _get_registry(db_path: str | None = None):
     if db_path is None:
         db_path = os.environ.get(
             "SCREEN_MEMORY_DB",
-            "D:\\ScreenMemo\\screen-memory\\screen-memory.db",
+            str(Path.home() / ".screenmemory" / "screen-memory.db"),
         )
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
     db = Database(db_path)
@@ -113,7 +114,7 @@ def cmd_capture(args):
     # Init DB
     db_path = args.db or os.environ.get(
         "SCREEN_MEMORY_DB",
-        "D:\\ScreenMemo\\screen-memory\\screen-memory.db",
+        str(Path.home() / ".screenmemory" / "screen-memory.db"),
     )
     db = Database(db_path)
     db.initialize()
