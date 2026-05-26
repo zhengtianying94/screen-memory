@@ -1,0 +1,8 @@
+server:
+  host: "0.0.0.0"
+  port: 8200
+  auth_token: "screen-memory-sync-token-2026"
+database:
+  path: "./data/screen-memory-sync.db"
+sync:
+  max_batch_size: 100
