@@ -147,12 +147,6 @@ class SyncDatabase:
         rows = self.conn.execute(sql, params).fetchall()
         return [dict(r) for r in rows]
 
-    def close(self) -> None:
-        """Close the database connection."""
-        if self._conn is not None:
-            self._conn.close()
-            self._conn = None
-
     def get_status(self) -> list[dict]:
         result = []
         for table in _TABLE_SCHEMAS:

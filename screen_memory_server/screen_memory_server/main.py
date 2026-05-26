@@ -62,7 +62,8 @@ def create_app(config_path: Optional[str] = None, auth_token: Optional[str] = No
     def query(req: QueryRequest, authorization: Optional[str] = Header(None)):
         _check_auth(authorization)
         exclude = req.device_id if req.exclude_self else None
-        results = db.query_records(req.table, exclude_device=exclude)
+        filters = req.query if req.query else None
+        results = db.query_records(req.table, exclude_device=exclude, filters=filters)
         return {"results": results}
 
     @app.get("/api/v1/sync/status")
