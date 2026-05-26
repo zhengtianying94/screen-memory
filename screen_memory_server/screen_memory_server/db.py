@@ -92,7 +92,7 @@ class SyncDatabase:
     @property
     def conn(self) -> sqlite3.Connection:
         if self._conn is None:
-            self._conn = sqlite3.connect(self._path)
+            self._conn = sqlite3.connect(self._path, check_same_thread=False)
             self._conn.execute("PRAGMA journal_mode=WAL")
             self._conn.execute("PRAGMA foreign_keys=ON")
             self._conn.row_factory = sqlite3.Row
@@ -146,6 +146,12 @@ class SyncDatabase:
                 params.append(val)
         rows = self.conn.execute(sql, params).fetchall()
         return [dict(r) for r in rows]
+
+    def close(self) -> None:
+        """Close the database connection."""
+        if self._conn is not None:
+            self._conn.close()
+            self._conn = None
 
     def get_status(self) -> list[dict]:
         result = []
