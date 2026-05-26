@@ -71,23 +71,28 @@ class ScreenMemoryService : AccessibilityService() {
     }
 
     fun startForegroundNotification() {
-        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val channel = NotificationChannel(
-            CHANNEL_ID, "Screen Memory", NotificationManager.IMPORTANCE_LOW,
-        )
-        nm.createNotificationChannel(channel)
-        val notification = Notification.Builder(this, CHANNEL_ID)
-            .setContentTitle("Screen Memory")
-            .setContentText("Service running")
-            .setSmallIcon(android.R.drawable.ic_menu_camera)
-            .build()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(
-                NOTIFICATION_ID, notification,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION,
+        try {
+            val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            val channel = NotificationChannel(
+                CHANNEL_ID, "Screen Memory", NotificationManager.IMPORTANCE_LOW,
             )
-        } else {
-            startForeground(NOTIFICATION_ID, notification)
+            nm.createNotificationChannel(channel)
+            val notification = Notification.Builder(this, CHANNEL_ID)
+                .setContentTitle("Screen Memory")
+                .setContentText("Service running")
+                .setSmallIcon(android.R.drawable.ic_menu_camera)
+                .build()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(
+                    NOTIFICATION_ID, notification,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION,
+                )
+            } else {
+                startForeground(NOTIFICATION_ID, notification)
+            }
+        } catch (e: Exception) {
+            // Foreground service start may fail on some ROMs/Android versions
+            // (e.g. MIUI restrictions, API 36+ enforcement). Don't crash.
         }
     }
 }

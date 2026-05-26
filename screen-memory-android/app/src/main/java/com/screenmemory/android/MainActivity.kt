@@ -34,14 +34,18 @@ class MainActivity : Activity() {
         }
 
         btnAuthorize.setOnClickListener {
-            val service = ScreenMemoryService.instance
-            if (service != null) {
-                service.startForegroundNotification()
+            try {
+                val service = ScreenMemoryService.instance
+                if (service != null) {
+                    service.startForegroundNotification()
+                }
+                startActivityForResult(
+                    projectionManager.createScreenCaptureIntent(),
+                    REQUEST_MEDIA_PROJECTION,
+                )
+            } catch (e: Exception) {
+                updateStatus()
             }
-            startActivityForResult(
-                projectionManager.createScreenCaptureIntent(),
-                REQUEST_MEDIA_PROJECTION,
-            )
         }
     }
 
@@ -53,12 +57,17 @@ class MainActivity : Activity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if (requestCode == REQUEST_MEDIA_PROJECTION) {
             if (resultCode == RESULT_OK && data != null) {
-                val service = ScreenMemoryService.instance
-                if (service != null) {
-                    service.startForegroundNotification()
+                try {
+                    val service = ScreenMemoryService.instance
+                    if (service != null) {
+                        service.startForegroundNotification()
+                    }
+                    ScreenMemoryService.mediaProjection =
+                        projectionManager.getMediaProjection(resultCode, data)
+                } catch (e: Exception) {
+                    // getMediaProjection may throw SecurityException on some ROMs
+                    ScreenMemoryService.mediaProjection = null
                 }
-                ScreenMemoryService.mediaProjection =
-                    projectionManager.getMediaProjection(resultCode, data)
                 updateStatus()
             }
         }
