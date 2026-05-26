@@ -11,7 +11,8 @@
     "graph_query_subtree",
     "signal_ingest",
     "signal_activate",
-    "screenshot_search"
+    "screenshot_search",
+    "sync_status"
   ],
   "requires": {
     "python": ">=3.10"

@@ -30,6 +30,7 @@ _TOOL_DEFINITIONS = [
             "type": "object",
             "properties": {
                 "uri": {"type": "string", "description": "Nocturne URI"},
+                "scope": {"type": "string", "description": "Query scope: local (default), remote, all", "default": "local"},
             },
             "required": ["uri"],
         },
@@ -42,6 +43,7 @@ _TOOL_DEFINITIONS = [
             "properties": {
                 "query": {"type": "string", "description": "FTS5 search query"},
                 "limit": {"type": "integer", "description": "Max results", "default": 20},
+                "scope": {"type": "string", "description": "Query scope: local (default), remote, all", "default": "local"},
             },
             "required": ["query"],
         },
@@ -65,6 +67,7 @@ _TOOL_DEFINITIONS = [
             "properties": {
                 "uri": {"type": "string", "description": "Root URI"},
                 "max_depth": {"type": "integer", "description": "Max depth to traverse"},
+                "scope": {"type": "string", "description": "Query scope: local (default), remote, all", "default": "local"},
             },
             "required": ["uri"],
         },
@@ -106,8 +109,17 @@ _TOOL_DEFINITIONS = [
             "properties": {
                 "query": {"type": "string", "description": "Search query"},
                 "limit": {"type": "integer", "description": "Max results", "default": 20},
+                "scope": {"type": "string", "description": "Query scope: local (default), remote, all", "default": "local"},
             },
             "required": ["query"],
+        },
+    },
+    {
+        "name": "sync_status",
+        "description": "Check sync status and list connected devices.",
+        "parameters": {
+            "type": "object",
+            "properties": {},
         },
     },
 ]
@@ -125,6 +137,8 @@ class ToolRegistry:
         self._graph = graph_service
         self._signal = signal_service
         self._ss_repo = screenshot_repo
+        self._query_bridge = None
+        self._sync_client = None
         self._dispatchers = {
             "memory_write": self._memory_write,
             "memory_read": self._memory_read,
@@ -134,6 +148,7 @@ class ToolRegistry:
             "signal_ingest": self._signal_ingest,
             "signal_activate": self._signal_activate,
             "screenshot_search": self._screenshot_search,
+            "sync_status": self._sync_status,
         }
 
     def list_tools(self) -> list[dict]:
@@ -143,6 +158,12 @@ class ToolRegistry:
         if tool_name not in self._dispatchers:
             raise ValueError(f"unknown tool: {tool_name}")
         return self._dispatchers[tool_name](params)
+
+    def set_query_bridge(self, bridge) -> None:
+        self._query_bridge = bridge
+
+    def set_sync_client(self, client) -> None:
+        self._sync_client = client
 
     # -- Tool implementations -------------------------------------------------
 
@@ -158,6 +179,20 @@ class ToolRegistry:
         uri = params.get("uri")
         if not uri:
             raise ValueError("memory_read requires 'uri'")
+        scope = params.get("scope", "local")
+        if scope == "remote":
+            if self._query_bridge is None:
+                return None
+            results = self._query_bridge.query("memories", {"node_uri": uri})
+            return results[0] if results else None
+        if scope == "all":
+            local = self._graph.read(uri)
+            if local:
+                return local
+            if self._query_bridge is None:
+                return None
+            results = self._query_bridge.query("memories", {"node_uri": uri})
+            return results[0] if results else None
         return self._graph.read(uri)
 
     def _memory_search(self, params: dict) -> list[dict]:
@@ -165,6 +200,22 @@ class ToolRegistry:
         if not query:
             raise ValueError("memory_search requires 'query'")
         limit = params.get("limit", 20)
+        scope = params.get("scope", "local")
+        if scope == "remote":
+            if self._query_bridge is None:
+                return []
+            return self._query_bridge.query("memories_fts", {"query": query})
+        if scope == "all":
+            local = self._graph._repo.search(query, limit)
+            if self._query_bridge is None:
+                return local
+            remote = self._query_bridge.query("memories_fts", {"query": query})
+            seen = {r["node_uri"] for r in local}
+            for r in remote:
+                if r.get("node_uri") not in seen:
+                    local.append(r)
+                    seen.add(r["node_uri"])
+            return local[:limit]
         return self._graph._repo.search(query, limit)
 
     def _memory_delete(self, params: dict) -> dict:
@@ -180,6 +231,12 @@ class ToolRegistry:
         if not uri:
             raise ValueError("graph_query_subtree requires 'uri'")
         max_depth = params.get("max_depth")
+        scope = params.get("scope", "local")
+        if scope != "local":
+            if self._query_bridge is None:
+                return {}
+            results = self._query_bridge.query("nodes", {"uri": uri})
+            return results[0] if results else {}
         parsed = NocturneUri.parse(uri)
         result = self._graph.get_subtree(parsed, max_depth=max_depth)
         return result or {}
@@ -204,4 +261,39 @@ class ToolRegistry:
         if not query:
             raise ValueError("screenshot_search requires 'query'")
         limit = params.get("limit", 20)
+        scope = params.get("scope", "local")
+        if scope == "remote":
+            if self._query_bridge is None:
+                return []
+            return self._query_bridge.query("screenshots", {"ocr_text LIKE": f"%{query}%"})
+        if scope == "all":
+            local = self._ss_repo.search(query, limit)
+            if self._query_bridge is None:
+                return local
+            remote = self._query_bridge.query("screenshots", {"ocr_text LIKE": f"%{query}%"})
+            seen = {r.get("file_path") for r in local}
+            for r in remote:
+                if r.get("file_path") not in seen:
+                    local.append(r)
+                    seen.add(r.get("file_path"))
+            return local[:limit]
         return self._ss_repo.search(query, limit)
+
+    def _sync_status(self, params: dict) -> dict:
+        result = {
+            "device_id": None,
+            "last_sync_time": None,
+            "pending_changes": 0,
+            "server_reachable": False,
+            "devices": [],
+        }
+        if self._sync_client:
+            result["device_id"] = self._sync_client.get_device_id()
+            result["last_sync_time"] = self._sync_client._get_last_sync_time()
+            changes = self._sync_client.detect_changes()
+            result["pending_changes"] = sum(len(v) for v in changes.values())
+        if self._query_bridge:
+            devices = self._query_bridge.list_devices()
+            result["server_reachable"] = True
+            result["devices"] = devices
+        return result

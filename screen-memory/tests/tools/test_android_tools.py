@@ -177,15 +177,15 @@ class TestAllToolsViaRegistry:
         results = reg.call("screenshot_search", {"query": "plugin"})
         assert len(results) == 1
 
-    def test_list_tools_has_8(self):
+    def test_list_tools_has_9(self):
         reg = _make_registry()
         tools = reg.list_tools()
-        assert len(tools) == 8
+        assert len(tools) == 9
         names = [t["name"] for t in tools]
         expected = [
             "memory_write", "memory_read", "memory_search", "memory_delete",
             "graph_query_subtree", "signal_ingest", "signal_activate",
-            "screenshot_search",
+            "screenshot_search", "sync_status",
         ]
         assert names == expected
 

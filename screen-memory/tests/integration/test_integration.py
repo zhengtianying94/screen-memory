@@ -189,7 +189,7 @@ class TestMemoryVersioningScenario:
 class TestPluginRegistrationScenario:
     def test_register_and_use(self, system):
         tools = system["registry"].list_tools()
-        assert len(tools) == 8
+        assert len(tools) == 9
         # Each tool has OpenClaw-compatible schema
         for t in tools:
             assert "name" in t

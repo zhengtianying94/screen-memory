@@ -18,6 +18,9 @@ def register(api) -> ToolRegistry:
     from screen_memory.storage.screenshot_repo import ScreenshotRepo
     from screen_memory.services.graph_service import GraphService
     from screen_memory.services.signal_service import SignalService, EntityPolicy
+    from screen_memory.sync.config import SyncConfig
+    from screen_memory.sync.client import SyncClient
+    from screen_memory.sync.query_bridge import QueryBridge
 
     db = Database(db_path)
     db.initialize()
@@ -31,4 +34,14 @@ def register(api) -> ToolRegistry:
         "event": EntityPolicy("event", 2.0, 86400 * 5, []),
     }
     signal_svc = SignalService(repo, policies)
-    return ToolRegistry(graph_svc, signal_svc, ss_repo)
+    registry = ToolRegistry(graph_svc, signal_svc, ss_repo)
+
+    sync_cfg = SyncConfig.from_env()
+    if sync_cfg.enabled:
+        client = SyncClient(db, sync_cfg.server_url, sync_cfg.token, sync_cfg.interval)
+        bridge = QueryBridge(sync_cfg.server_url, sync_cfg.token, client.get_device_id())
+        registry.set_sync_client(client)
+        registry.set_query_bridge(bridge)
+        client.start()
+
+    return registry
