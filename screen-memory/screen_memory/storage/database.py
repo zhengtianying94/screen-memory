@@ -109,6 +109,12 @@ CREATE TRIGGER IF NOT EXISTS memories_fts_update
         INSERT INTO memories_fts (rowid, content)
         VALUES (new.id, new.content);
     END;
+
+-- Sync state: metadata for cross-device sync
+CREATE TABLE IF NOT EXISTS sync_state (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
 """
 
 
