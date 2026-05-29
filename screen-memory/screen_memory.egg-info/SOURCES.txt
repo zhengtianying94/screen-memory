@@ -8,8 +8,15 @@ screen_memory.egg-info/entry_points.txt
 screen_memory.egg-info/requires.txt
 screen_memory.egg-info/top_level.txt
 screen_memory/adapters/__init__.py
+screen_memory/adapters/android_capture.py
 screen_memory/adapters/capture.py
+screen_memory/adapters/http_client.py
+screen_memory/adapters/mlkit_ocr.py
 screen_memory/adapters/ocr.py
+screen_memory/adapters/platform_factory.py
+screen_memory/adapters/tesseract_ocr.py
+screen_memory/adapters/windows_capture.py
+screen_memory/adapters/winrt_ocr.py
 screen_memory/models/__init__.py
 screen_memory/models/uri.py
 screen_memory/services/__init__.py
@@ -20,5 +27,9 @@ screen_memory/storage/__init__.py
 screen_memory/storage/database.py
 screen_memory/storage/graph_repo.py
 screen_memory/storage/screenshot_repo.py
+screen_memory/sync/__init__.py
+screen_memory/sync/client.py
+screen_memory/sync/config.py
+screen_memory/sync/query_bridge.py
 screen_memory/tools/__init__.py
 screen_memory/tools/registry.py

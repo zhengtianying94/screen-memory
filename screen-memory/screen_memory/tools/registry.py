@@ -183,7 +183,7 @@ class ToolRegistry:
         if scope == "remote":
             if self._query_bridge is None:
                 return None
-            results = self._query_bridge.query("memories", {"node_uri": uri})
+            results = self._query_bridge.query("memories", {"node_uri =": uri})
             return results[0] if results else None
         if scope == "all":
             local = self._graph.read(uri)
@@ -191,7 +191,7 @@ class ToolRegistry:
                 return local
             if self._query_bridge is None:
                 return None
-            results = self._query_bridge.query("memories", {"node_uri": uri})
+            results = self._query_bridge.query("memories", {"node_uri =": uri})
             return results[0] if results else None
         return self._graph.read(uri)
 
@@ -204,12 +204,12 @@ class ToolRegistry:
         if scope == "remote":
             if self._query_bridge is None:
                 return []
-            return self._query_bridge.query("memories_fts", {"query": query})
+            return self._query_bridge.query("memories", {"content LIKE": f"%{query}%"})
         if scope == "all":
             local = self._graph._repo.search(query, limit)
             if self._query_bridge is None:
                 return local
-            remote = self._query_bridge.query("memories_fts", {"query": query})
+            remote = self._query_bridge.query("memories", {"content LIKE": f"%{query}%"})
             seen = {r["node_uri"] for r in local}
             for r in remote:
                 if r.get("node_uri") not in seen:
@@ -235,7 +235,7 @@ class ToolRegistry:
         if scope != "local":
             if self._query_bridge is None:
                 return {}
-            results = self._query_bridge.query("nodes", {"uri": uri})
+            results = self._query_bridge.query("nodes", {"uri =": uri})
             return results[0] if results else {}
         parsed = NocturneUri.parse(uri)
         result = self._graph.get_subtree(parsed, max_depth=max_depth)

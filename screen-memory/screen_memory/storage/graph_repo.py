@@ -139,12 +139,24 @@ class GraphRepo:
     # -- FTS ------------------------------------------------------------------
 
     def search(self, query: str, limit: int = 20) -> list[dict]:
-        rows = self._db.execute(
-            "SELECT m.node_uri, m.content, m.version "
-            "FROM memories_fts f JOIN memories m ON m.id = f.rowid "
-            "WHERE memories_fts MATCH ? AND m.status='active' "
-            "ORDER BY rank LIMIT ?",
-            (query, limit),
-        ).fetchall()
         keys = ["node_uri", "content", "version"]
+        # Try FTS5 first (fast, ranked)
+        try:
+            rows = self._db.execute(
+                "SELECT m.node_uri, m.content, m.version "
+                "FROM memories_fts f JOIN memories m ON m.id = f.rowid "
+                "WHERE memories_fts MATCH ? AND m.status='active' "
+                "ORDER BY rank LIMIT ?",
+                (query, limit),
+            ).fetchall()
+            if rows:
+                return [dict(zip(keys, r)) for r in rows]
+        except Exception:
+            pass
+        # Fallback to LIKE (handles Chinese and special characters)
+        rows = self._db.execute(
+            "SELECT node_uri, content, version FROM memories "
+            "WHERE content LIKE ? AND status='active' LIMIT ?",
+            (f"%{query}%", limit),
+        ).fetchall()
         return [dict(zip(keys, r)) for r in rows]

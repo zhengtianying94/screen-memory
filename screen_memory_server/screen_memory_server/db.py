@@ -14,7 +14,7 @@ _TABLE_SCHEMAS = {
         created_at  TEXT NOT NULL,
         updated_at  TEXT NOT NULL,
         device_id   TEXT NOT NULL,
-        synced_at   TEXT NOT NULL DEFAULT (datetime('now')),
+        synced_at   TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
         PRIMARY KEY (uri, device_id)
     )""",
     "memories": """(
@@ -25,7 +25,7 @@ _TABLE_SCHEMAS = {
         status      TEXT NOT NULL DEFAULT 'active',
         created_at  TEXT NOT NULL,
         device_id   TEXT NOT NULL,
-        synced_at   TEXT NOT NULL DEFAULT (datetime('now')),
+        synced_at   TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
         PRIMARY KEY (id, device_id)
     )""",
     "edges": """(
@@ -36,7 +36,7 @@ _TABLE_SCHEMAS = {
         weight      REAL NOT NULL DEFAULT 1.0,
         created_at  TEXT NOT NULL,
         device_id   TEXT NOT NULL,
-        synced_at   TEXT NOT NULL DEFAULT (datetime('now')),
+        synced_at   TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
         PRIMARY KEY (id, device_id)
     )""",
     "paths": """(
@@ -71,7 +71,7 @@ _TABLE_SCHEMAS = {
         captured_at TEXT NOT NULL,
         uri         TEXT,
         device_id   TEXT NOT NULL,
-        synced_at   TEXT NOT NULL DEFAULT (datetime('now')),
+        synced_at   TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
         PRIMARY KEY (id, device_id)
     )""",
 }

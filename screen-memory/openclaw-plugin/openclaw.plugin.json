@@ -1,0 +1,20 @@
+{
+  "id": "screen-memory",
+  "name": "Screen Memory",
+  "description": "Screen capture, OCR, URI Graph memory, and signal accumulation. Wraps the screen-memory Python CLI.",
+  "version": "0.1.0",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "dbPath": {
+        "type": "string",
+        "description": "Path to the screen-memory SQLite database file"
+      },
+      "screenshotDir": {
+        "type": "string",
+        "description": "Override screenshot save directory"
+      }
+    }
+  }
+}

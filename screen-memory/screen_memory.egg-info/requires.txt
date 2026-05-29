@@ -1,5 +1,20 @@
 Pillow>=10.0
+httpx>=0.27
+
+[android]
 
 [dev]
 pytest>=7.0
 pytest-cov>=4.0
+fastapi>=0.110
+httpx>=0.27
+
+[tesseract]
+pytesseract>=0.3.10
+
+[windows]
+winrt-Windows.Media.Ocr>=3.0
+winrt-Windows.Graphics.Imaging>=3.0
+winrt-Windows.Storage.Streams>=3.0
+winrt-Windows.Foundation>=3.0
+winrt-Windows.Foundation.Collections>=3.0

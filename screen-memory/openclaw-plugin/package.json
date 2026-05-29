@@ -1,0 +1,13 @@
+{
+  "name": "@shadow/screen-memory",
+  "version": "0.1.0",
+  "type": "module",
+  "openclaw": {
+    "extensions": ["./index.ts"],
+    "runtimeExtensions": ["./index.js"],
+    "compat": {
+      "pluginApi": ">=2026.4.26",
+      "minGatewayVersion": "2026.4.26"
+    }
+  }
+}

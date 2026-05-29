@@ -23,10 +23,10 @@ class QueryRequest(BaseModel):
     exclude_self: bool = True
 
 
-def create_app(config_path: Optional[str] = None, auth_token: Optional[str] = None, db_path: Optional[str] = None) -> FastAPI:
-    if config_path:
+def create_app(config_path: Optional[str] = "config.yaml", auth_token: Optional[str] = None, db_path: Optional[str] = None) -> FastAPI:
+    try:
         cfg = SyncConfig.from_yaml(config_path)
-    else:
+    except FileNotFoundError:
         cfg = SyncConfig()
 
     token = auth_token or cfg.auth_token
